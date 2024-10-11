@@ -1,0 +1,41 @@
+#create route table
+resource "azurerm_route_table" "my_terraform_rt" {
+  name                = "example-route-table"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  route {
+    name                   = "example-route"
+    address_prefix         = "10.0.0.0/24"   # Modify this to your target address prefix
+    next_hop_in_ip_address = "10.10.0.4"     # FW Address
+    next_hop_type          = "VirtualAppliance"    # Options: "VirtualNetworkGateway", "VnetLocal", "Internet", etc.
+  }
+}
+resource "azurerm_subnet_route_table_association" "my_terraform_rt" {
+  subnet_id      = azurerm_subnet.my_terraform_subnet.id
+  route_table_id = azurerm_route_table.my_terraform_rt.id
+}
+
+# create vnet peer between spoke and hub
+
+resource "azurerm_virtual_network_peering" "vnet1-to-vnet2" {
+  name                      = "vnet1-to-vnet2"
+  resource_group_name       = "rg-super-beagle"
+  virtual_network_name      = "azfw-vnet"
+  remote_virtual_network_id = "/subscriptions/CHANGETHIS/resourceGroups/win-vm-iis-CHANGETHIS-rg/providers/Microsoft.Network/virtualNetworks/win-vm-iis-CHANGETHIS-vnet"
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = false
+  use_remote_gateways          = false
+}
+
+resource "azurerm_virtual_network_peering" "vnet2-to-vnet1" {
+  name                      = "vnet2-to-vnet1"
+  resource_group_name       = "win-vm-iis-racer-rg"
+  virtual_network_name      = "win-vm-iis-racer-vnet"
+  remote_virtual_network_id = "/subscriptions/CHANGETHIS/resourceGroups/rg-CHANGETHIS-CHANGETHIS/providers/Microsoft.Network/virtualNetworks/azfw-vnet"
+    allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = false
+  use_remote_gateways          = false
+}
